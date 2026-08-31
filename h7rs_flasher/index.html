@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=20260831_butterfly_v1">
+    <title>STM32 H7RS Resource Web Flasher · 屏幕资源烧录工作台</title>
+<link rel="stylesheet" href="style.css?v=20260831_select_v1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 极客点阵工程网格 & 物理光追 Canvas 背景 -->
+    <div class="dot-matrix-grid"></div>
+    <canvas id="auroraCanvas"></canvas>
+
+    <!-- 顶部导航栏 (统一 Apple / Tesla 浅色工控透光磨砂玻璃) -->
+    <header class="app-header">
+        <div class="header-left">
+            <a href="../index.html" class="back-home-btn" title="返回统一总平台">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>总平台</span>
+            </a>
+            <div class="brand-divider"></div>
+            <div class="brand-badge">
+                <div class="brand-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                        <polyline points="2 17 12 22 22 17"></polyline>
+                        <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                </div>
+                <div class="brand-text-group">
+                    <span class="brand-name">H7RS Flasher</span>
+                    <span class="brand-tag">STM32H7RS</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <div class="status-capsule">
+                <span id="connectionDot" class="status-dot offline"></span>
+                <span id="connectionIndicator" class="connection-text">未连接</span>
+                <span class="browser-hint-label">Web Serial · 921,600</span>
+            </div>
+
+            <button id="btnConnect" class="btn-connect-ready">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M5 12h14"></path>
+                    <path d="M12 5l7 7-7 7"></path>
+                </svg>
+                <span>连接板卡</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <!-- 左侧：资源仓库看板 -->
+        <aside class="sidebar-left">
+            <div class="sidebar-header">
+                <div class="sidebar-title-row">
+                    <div class="card-icon icon-purple">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2>多媒体资源仓库</h2>
+                        <p>Flash 资源打包与管理</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.bmp" hidden>
+                <input type="file" id="animationInput" multiple accept=".png,.jpg,.jpeg,.bmp" hidden>
+                <input type="file" id="appendFramesInput" multiple accept=".png,.jpg,.jpeg,.bmp" hidden>
+                <input type="file" id="videoInput" accept="video/*" hidden>
+                
+                <div class="add-buttons-grid">
+                    <button id="btnAddImage" class="btn-secondary add-btn btn-add-img">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span>添加图片</span>
+                    </button>
+                    <button id="btnAddAnimation" class="btn-secondary add-btn btn-add-anim">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <span>动画帧组</span>
+                    </button>
+                    <button id="btnAddVideo" class="btn-secondary add-btn btn-add-video">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>
+                        <span>视频抽帧</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="resource-list-container">
+                <ul id="resourceList" class="resource-list"></ul>
+                <div id="emptyResourceHint" class="empty-resource-state">
+                    <div class="empty-icon-wrap">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <div class="empty-text-title">暂无已导入资源</div>
+                    <div class="empty-text-desc">点击上方按钮导入图片、动画帧或将视频自动抽帧切片</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 中间：LCD 硬件工作台与标尺视口 -->
+        <section class="preview-area">
+            <!-- 顶部悬浮工具栏 (Apple Pro 磨砂胶囊) -->
+            <div class="preview-toolbar">
+                <div class="preview-info-pill" id="previewInfo">
+                    <span class="info-dot"></span>
+                    <span>280 × 240 LCD · 缩放 150% · RGB565: 0 B</span>
+                </div>
+                
+                <div class="display-settings">
+                    <div class="setting-item">
+                        <label for="lcdWidth">屏幕尺寸</label>
+                        <div class="size-inputs">
+                            <input type="number" id="lcdWidth" min="1" max="4096" value="280">
+                            <span class="sep">×</span>
+                            <input type="number" id="lcdHeight" min="1" max="4096" value="240">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item zoom-item">
+                        <label for="previewZoom">缩放</label>
+                        <div class="zoom-slider-group">
+                            <input type="range" id="previewZoom" min="25" max="300" step="5" value="150">
+                            <span id="previewZoomValue" class="zoom-val">150%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 画布视口 (实体 LCD 工业级硬件外壳) -->
+            <div class="preview-scroll" id="previewScroll">
+                <div class="lcd-hardware-frame">
+                    <div class="lcd-frame-header">
+                        <span class="lcd-bezel-screws screw-tl"></span>
+                        <span class="lcd-bezel-title">STM32-H7RS · IPS RETINA DISPLAY (RGB565)</span>
+                        <span class="lcd-bezel-screws screw-tr"></span>
+                    </div>
+                    <div class="preview-grid" id="previewGrid">
+                        <div class="ruler-corner"></div>
+                        <canvas id="rulerTop" width="420" height="20"></canvas>
+                        <canvas id="rulerLeft" width="30" height="360"></canvas>
+                        <div class="canvas-container">
+                            <canvas id="lcdCanvas" width="280" height="240"></canvas>
+                        </div>
+                    </div>
+                    <div class="lcd-frame-footer">
+                        <span class="lcd-bezel-screws screw-bl"></span>
+                        <span class="lcd-bezel-sub">HARDWARE PIXEL RESOLUTION: <b id="lcdResolutionBadge">280×240</b></span>
+                        <span class="lcd-bezel-screws screw-br"></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右侧：常驻双模态参数与 Flash 看板 -->
+        <aside class="sidebar-right" id="rightSidebarContainer">
+            <!-- 模态 A：未选中资源时的常驻全局看板 (彻底根除右侧空洞痛点) -->
+            <div id="overviewPanel" class="panel-view overview-panel">
+                <div class="sidebar-header">
+                    <div class="sidebar-title-row">
+                        <div class="card-icon icon-teal">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                                <polyline points="2 17 12 22 22 17"></polyline>
+                                <polyline points="2 12 12 17 22 12"></polyline>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2>Flash 架构与总览</h2>
+                            <p>外部 Quad-SPI 存储规划</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="param-scroll-area">
+                    <!-- 卡片 1: 存储架构 -->
+                    <div class="info-card-block">
+                        <div class="block-title">硬件存储映射</div>
+                        <div class="spec-grid">
+                            <div class="spec-item">
+                                <span class="spec-label">Flash 容量</span>
+                                <span class="spec-val font-mono">4.00 MB (4096 KB)</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">基地址</span>
+                                <span class="spec-val font-mono">0x90000000</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">扇区大小</span>
+                                <span class="spec-val font-mono">64 KB / Sector</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">色彩格式</span>
+                                <span class="spec-val font-mono">RGB565 (16-bit LE)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 卡片 2: 资源统计 -->
+                    <div class="info-card-block">
+                        <div class="block-title">资源统计清单</div>
+                        <div class="stats-overview-grid">
+                            <div class="stat-pill-box">
+                                <span>图片总数</span>
+                                <strong id="statImgCount">0</strong>
+                            </div>
+                            <div class="stat-pill-box">
+                                <span>动画组数</span>
+                                <strong id="statAnimCount">0</strong>
+                            </div>
+                            <div class="stat-pill-box">
+                                <span>总动画帧</span>
+                                <strong id="statTotalFrames">0</strong>
+                            </div>
+                            <div class="stat-pill-box">
+                                <span>预估占用</span>
+                                <strong id="statTotalBytes" class="font-mono">0 B</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 卡片 3: 颜色转换器 -->
+                    <div class="info-card-block">
+                        <div class="block-title">RGB565 颜色拾取计算器</div>
+                        <div class="color-tool-row">
+                            <input type="color" id="toolColorPicker" value="#0071E3" class="color-picker-input">
+                            <div class="color-code-box">
+                                <div>HEX888: <span id="toolHex888" class="font-mono">#0071E3</span></div>
+                                <div>HEX565: <span id="toolHex565" class="font-mono font-bold text-primary">0x039C</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 卡片 4: 快速操作指引 -->
+                    <div class="quick-guide-banner">
+                        <div class="guide-title">📌 烧录操作指引</div>
+                        <ol class="guide-steps">
+                            <li>点击左侧按钮导入图片或动画帧序列；</li>
+                            <li>在中间 LCD 画布中拖动、缩放或对齐位置；</li>
+                            <li>板卡进入 <b>USB UPDATE</b> 界面并连接串口；</li>
+                            <li>点击底部 <b>开始烧录</b> 一键极速写入 Flash。</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 模态 B：选中具体资源时的详细属性配置面板 -->
+            <div class="panel-view param-panel" id="paramPanel" style="display: none;">
+                <div class="sidebar-header">
+                    <div class="sidebar-title-row">
+                        <div class="card-icon icon-teal">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 id="paramTitle">资源参数</h2>
+                            <p>物理尺寸与对齐属性</p>
+                        </div>
+                    </div>
+                    <button id="btnBackToOverview" class="btn-mini-close" title="返回概览">✕</button>
+                </div>
+                
+                <div class="param-scroll-area">
+                    <div class="param-group">
+                        <label for="paramId">资源 ID</label>
+                        <div class="input-unit">
+                            <input type="number" id="paramId" min="1" max="65535">
+                            <span class="unit-tag">UINT16</span>
+                        </div>
+                        <div class="field-hint">当前 H7 固件固定：图片 100，动画 101</div>
+                    </div>
+
+                    <div class="param-group">
+                        <label id="resourceSizeLabel">目标尺寸 (宽 × 高)</label>
+                        <div class="param-row-dual">
+                            <div class="input-unit">
+                                <input type="number" id="paramWidth" min="1" max="280" placeholder="宽">
+                                <span class="unit-tag">W</span>
+                            </div>
+                            <div class="input-unit">
+                                <input type="number" id="paramHeight" min="1" max="240" placeholder="高">
+                                <span class="unit-tag">H</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="param-group">
+                        <label>默认显示坐标 (X / Y)</label>
+                        <div class="param-row-dual">
+                            <div class="input-unit">
+                                <input type="number" id="paramX" min="-279" max="279" value="0">
+                                <span class="unit-tag">X</span>
+                            </div>
+                            <div class="input-unit">
+                                <input type="number" id="paramY" min="-239" max="239" value="0">
+                                <span class="unit-tag">Y</span>
+                            </div>
+                        </div>
+                        <div class="position-matrix-card">
+                            <div class="position-grid">
+                                <button data-align="top-left" title="左上">↖</button>
+                                <button data-align="top-center" title="上居中">↑</button>
+                                <button data-align="top-right" title="右上">↗</button>
+                                <button data-align="middle-left" title="左居中">←</button>
+                                <button data-align="center" title="正居中" class="align-center-btn">居中</button>
+                                <button data-align="middle-right" title="右居中">→</button>
+                                <button data-align="bottom-left" title="左下">↙</button>
+                                <button data-align="bottom-center" title="下居中">↓</button>
+                                <button data-align="bottom-right" title="右下">↘</button>
+                            </div>
+                            <button id="btnPositionOrigin" class="btn-secondary origin-btn">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                <span>原点归位 (0, 0)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="param-group">
+                        <label for="paramScaleMode">缩放与裁切方式</label>
+                        <select id="paramScaleMode" class="custom-select">
+                            <option value="fit">保持比例 (Fit)</option>
+                            <option value="cover">铺满裁剪 (Cover)</option>
+                            <option value="stretch">拉伸 (Stretch)</option>
+                            <option value="center">居中不缩放 (Center)</option>
+                        </select>
+                    </div>
+
+                    <div class="param-group">
+                        <label for="paramBgColor">背景填充色 (合成透明图层)</label>
+                        <div class="color-picker-capsule">
+                            <input type="color" id="paramBgColor" class="color-picker-input" value="#000000">
+                            <span id="bgColorHex" class="color-hex-label">#000000</span>
+                        </div>
+                    </div>
+
+                    <div class="param-group" id="animationParams" style="display: none;">
+                        <label for="paramFps">动画播放帧率</label>
+                        <div class="input-unit">
+                            <input type="number" id="paramFps" min="1" max="30" value="10">
+                            <span class="unit-tag">FPS (1~30)</span>
+                        </div>
+                        <div id="frameInfo" class="frame-stat-box"></div>
+                        <button id="btnPreviewToggle" class="btn-secondary anim-toggle-btn">暂停预览</button>
+
+                        <label class="section-sublabel">动画帧管理</label>
+                        <select id="frameList" size="5" class="frame-list-select"></select>
+                        <div class="frame-action-bar">
+                            <button id="btnAppendFrames" class="btn-secondary">追加</button>
+                            <button id="btnFrameUp" class="btn-secondary">↑ 上移</button>
+                            <button id="btnFrameDown" class="btn-secondary">↓ 下移</button>
+                            <button id="btnFrameReverse" class="btn-secondary">反向</button>
+                            <button id="btnFrameDelete" class="btn-danger">删除</button>
+                        </div>
+                    </div>
+                    
+                    <div class="param-footer">
+                        <button id="btnDelete" class="btn-danger delete-res-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            <span>删除当前资源</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- 底部：状态与操作栏 (Apple / Linear 高度集成) -->
+    <footer class="footer-bar">
+        <div class="status-bar" id="statusBar">
+            <div class="capacity-area">
+                <div class="capacity-header">
+                    <span id="packageSize" class="capacity-title">包大小: 0 B / 4 MB</span>
+                    <span id="capacityDetail" class="capacity-detail">剩余: 4.00 MB</span>
+                </div>
+                <div class="capacity-track">
+                    <div id="capacityFill" class="capacity-fill"></div>
+                </div>
+            </div>
+            <div class="flash-status-group">
+                <span id="flashProgress" class="progress-pill">进度: -</span>
+                <span id="flashStatus" class="status-instruction">烧录前：进入板卡 USB UPDATE 页面并按确认</span>
+            </div>
+        </div>
+        <div class="action-buttons">
+            <button id="btnExport" class="btn-secondary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>导出资源包</span>
+            </button>
+            <button id="btnFlash" class="btn-primary btn-flash" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                <span>开始烧录</span>
+            </button>
+            <button id="btnAbort" class="btn-danger btn-abort" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="6" y="6" width="12" height="12" rx="1"></rect></svg>
+                <span>中止烧录</span>
+            </button>
+        </div>
+    </footer>
+
+    <!-- 视频抽帧弹窗 -->
+    <dialog id="videoDialog" class="video-dialog-modal">
+        <div class="dialog-content">
+            <div class="dialog-header">
+                <div class="card-icon icon-purple">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                </div>
+                <div>
+                    <h3>视频智能抽帧</h3>
+                    <p>自动解析视频并按指定帧率转换为动画帧序列</p>
+                </div>
+            </div>
+            
+            <div id="videoInfo" class="video-info-banner">请选择视频文件</div>
+            <div class="video-player-box">
+                <video id="videoPreview" muted playsinline controls></video>
+            </div>
+            
+            <div class="dialog-form-grid">
+                <div class="form-item">
+                    <label>截取时间 (起 / 止)</label>
+                    <div class="param-row-dual">
+                        <div class="input-unit">
+                            <input type="number" id="videoStart" min="0" step="0.1" value="0">
+                            <span class="unit-tag">s</span>
+                        </div>
+                        <div class="input-unit">
+                            <input type="number" id="videoEnd" min="0" step="0.1" value="1">
+                            <span class="unit-tag">s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-item">
+                    <label for="videoExtractFps">抽帧率</label>
+                    <div class="input-unit">
+                        <input type="number" id="videoExtractFps" min="1" max="30" value="10">
+                        <span class="unit-tag">FPS</span>
+                    </div>
+                </div>
+
+                <div class="form-item">
+                    <label>输出分辨率 (宽 × 高)</label>
+                    <div class="param-row-dual">
+                        <div class="input-unit">
+                            <input type="number" id="videoWidth" min="1" max="280" value="160">
+                            <span class="unit-tag">W</span>
+                        </div>
+                        <div class="input-unit">
+                            <input type="number" id="videoHeight" min="1" max="240" value="120">
+                            <span class="unit-tag">H</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-item">
+                    <label for="videoScaleMode">处理方式</label>
+                    <select id="videoScaleMode" class="custom-select">
+                        <option value="fit">保持比例 (Fit)</option>
+                        <option value="cover">铺满裁剪 (Cover)</option>
+                        <option value="stretch">拉伸 (Stretch)</option>
+                        <option value="center">居中不缩放 (Center)</option>
+                    </select>
+                </div>
+
+                <div class="form-item full-row">
+                    <label for="videoBgColor">背景填充色</label>
+                    <input type="color" id="videoBgColor" class="color-picker-input" value="#000000">
+                </div>
+            </div>
+
+            <div id="videoEstimate" class="video-estimate-box"></div>
+            
+            <div class="dialog-buttons">
+                <button id="btnVideoCancel" class="btn-secondary">取消</button>
+                <button id="btnVideoCreate" class="btn-primary">开始抽帧</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script src="image.js?v=20260827_light_v3"></script>
+    <script src="package.js?v=20260827_light_v3"></script>
+<script src="serial.js?v=20260827_light_v3"></script>
+<script src="custom_select.js?v=20260831_select_v1"></script>
+<script src="app.js?v=20260827_light_v3"></script>
+    <script src="../aurora.js?v=20260829_sub_physics_v1"></script>
+</body>
+</html>

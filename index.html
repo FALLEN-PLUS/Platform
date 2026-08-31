@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20260831_butterfly_v1">
+    <title>Embedded Studio · Next-Gen Hardware Engineering Suite</title>
+    <link rel="stylesheet" href="style.css?v=20260829_crystal_translucent_v1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 极客点阵工程网格 (Subtle Engineering Dot Matrix) -->
+    <div class="dot-matrix-grid"></div>
+
+    <!-- 物理级光追折射漫透 Canvas 背景 -->
+    <canvas id="auroraCanvas"></canvas>
+
+    <!-- 居中核心工作台舞台 -->
+    <main class="hub-main-stage">
+        <!-- 核心标题区 (Linear / Apple Pro 工业级 · 纯粹极简 · 层次分明) -->
+        <header class="hero-intro">
+            <!-- 主标题 -->
+            <h1 class="hero-title">Next-Gen Hardware Engineering Studio</h1>
+
+            <!-- 极简浏览器支持小标题栏 -->
+            <div class="hero-subtitle-capsule">
+                <span class="browser-item">
+                    <svg class="browser-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
+                    Google Chrome
+                </span>
+                <span class="browser-dot-sep">·</span>
+                <span class="browser-item">
+                    <svg class="browser-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6a6 6 0 0 0-6 6c0 2.5 1.5 4.5 3.5 5.5"/></svg>
+                    Microsoft Edge
+                </span>
+                <span class="browser-dot-sep">·</span>
+                <span class="browser-item">
+                    <svg class="browser-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="12" cy="12" r="3"/></svg>
+                    Chromium 89+
+                </span>
+            </div>
+        </header>
+
+        <!-- 2x2 大气简约工作台卡片网格 -->
+        <section class="workbench-grid">
+            <!-- 卡片 1: Universal Web Plotter (通用免驱示波器) -->
+            <div class="workbench-card card-plotter-theme" id="cardPlotter" data-href="serial_plotter/index.html">
+                <div class="card-inner">
+                    <div class="card-header">
+                        <div class="card-icon card-icon-plotter">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg>
+                        </div>
+                        <div class="card-title-group">
+                            <h2 class="card-title">Universal Plotter</h2>
+                            <span class="card-badge">UNIVERSAL</span>
+                        </div>
+                    </div>
+
+                    <p class="card-desc">
+                        全平台免驱高速串口示波器与多通道数据流解析。
+                    </p>
+
+                    <!-- 3 列极简规格指标 -->
+                    <div class="card-spec-grid">
+                        <div class="spec-item">
+                            <span class="spec-value">FireWater</span>
+                            <span class="spec-label">双协议自适应</span>
+                        </div>
+                        <div class="spec-divider"></div>
+                        <div class="spec-item">
+                            <span class="spec-value">2.0 Mbps</span>
+                            <span class="spec-label">高速硬件波特率</span>
+                        </div>
+                        <div class="spec-divider"></div>
+                        <div class="spec-item">
+                            <span class="spec-value">16 通道</span>
+                            <span class="spec-label">VOFA+ 游标标定</span>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="card-bus-tag">
+                            <span class="bus-dot dot-plotter"></span>
+                            <span class="bus-text">Web Serial · 16通道自适应</span>
+                        </div>
+                        <div class="card-action">
+                            <span>进入工作台</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 卡片 2: STM32 H7RS Resource Flasher -->
+            <div class="workbench-card card-h7-theme" id="cardH7" data-href="h7rs_flasher/index.html">
+                <div class="card-inner">
+                    <div class="card-header">
+                        <div class="card-icon card-icon-h7">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                        </div>
+                        <div class="card-title-group">
+                            <h2 class="card-title">H7RS Flasher</h2>
+                            <span class="card-badge">STM32 H7RS</span>
+                        </div>
+                    </div>
+
+                    <p class="card-desc">
+                        屏幕动效在线排版、视频抽帧切片与 QSPI Flash 极速烧录。
+                    </p>
+
+                    <!-- 3 列极简规格指标 -->
+                    <div class="card-spec-grid">
+                        <div class="spec-item">
+                            <span class="spec-value">280×240</span>
+                            <span class="spec-label">拟真屏幕实时排版</span>
+                        </div>
+                        <div class="spec-divider"></div>
+                        <div class="spec-item">
+                            <span class="spec-value">MP4 抽帧</span>
+                            <span class="spec-label">硬件动效切片提取</span>
+                        </div>
+                        <div class="spec-divider"></div>
+                        <div class="spec-item">
+                            <span class="spec-value">4MB QSPI</span>
+                            <span class="spec-label">USB-CDC 极速烧录</span>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="card-bus-tag">
+                            <span class="bus-dot dot-h7"></span>
+                            <span class="bus-text">USB-CDC · 4MB QSPI Flash</span>
+                        </div>
+                        <div class="card-action">
+                            <span>进入工作台</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 卡片 3: FOC Vector Studio (无刷电机矢量控制) -->
+            <div class="workbench-card card-foc-theme" id="cardFoc" data-href="foc_studio/index.html">
+                <div class="card-inner">
+                    <div class="card-header">
+                        <div class="card-icon card-icon-foc">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <path d="M12 3v3m0 12v3M3 12h3m12 0h3"></path>
+                                <circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity="0.25"></circle>
+                                <line x1="12" y1="12" x2="16" y2="8" stroke-width="2.5" stroke-linecap="round"></line>
+                            </svg>
+                        </div>
+                        <div class="card-title-group">
+                            <h2 class="card-title">FOC Vector Studio</h2>
+                            <span class="card-badge">MSPM0 G3507</span>
+                        </div>
+                    </div>
+
+                    <p class="card-desc">
+                        无刷电机闭环矢量控制与 LADRC 四环在线参数整定。
+                    </p>
+
+                    <!-- 3 列极简规格指标 -->
+                    <div class="card-spec-grid">
+                        <div class="spec-item">
+                            <span class="spec-value">60 FPS</span>
+                            <span class="spec-label">5通道实时遥测</span>
+                        </div>
+                        <div class="spec-divider"></div>
+                        <div class="spec-item">
+                            <span class="spec-value">LADRC</span>
+                            <span class="spec-label">四环在线参数整定</span>
+                        </div>
+                        <div class="spec-divider"></div>
+                        <div class="spec-item">
+                            <span class="spec-value">460.8k</span>
+                            <span class="spec-label">JustFloat 0 丢帧</span>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="card-bus-tag">
+                            <span class="bus-dot dot-foc"></span>
+                            <span class="bus-text">Web Serial · 460.8k 8N1</span>
+                        </div>
+                        <div class="card-action">
+                            <span>进入工作台</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 卡片 4: IMU Studio & OTA -->
+            <div class="workbench-card card-imu-theme" id="cardImu" data-href="imu_studio/index.html">
+                <div class="card-inner">
+                    <div class="card-header">
+                        <div class="card-icon card-icon-imu">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                            </svg>
+                        </div>
+                        <div class="card-title-group">
+                            <h2 class="card-title">IMU Studio & OTA</h2>
+                            <span class="card-badge">MSPM0 G3507</span>
+                        </div>
+                    </div>
+
+                    <p class="card-desc">
+                        空间 3D 姿态解算、六面矩阵校准与单片机双模 OTA 部署。
+                    </p>
+
+                    <!-- 3 列极简规格指标 -->
+                    <div class="card-spec-grid">
+                        <div class="spec-item">
+                            <span class="spec-value">WebGL 3D</span>
+                            <span class="spec-label">空间姿态实时解算</span>
+                        </div>
+                        <div class="spec-divider"></div>
+                        <div class="spec-item">
+                            <span class="spec-value">六面校准</span>
+                            <span class="spec-label">传感器椭球矩阵标定</span>
+                        </div>
+                        <div class="spec-divider"></div>
+                        <div class="spec-item">
+                            <span class="spec-value">55AA OTA</span>
+                            <span class="spec-label">CRC32 在线固件升级</span>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="card-bus-tag">
+                            <span class="bus-dot dot-imu"></span>
+                            <span class="bus-text">Web Serial · 460.8k 8N1</span>
+                        </div>
+                        <div class="card-action">
+                            <span>进入工作台</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 交互脚本：单色自然日光光追引擎与卡片 3D 机械阻尼倾斜 -->
+    <script src="aurora.js?v=20260829_crystal_translucent_v1"></script>
+    <script>
+        // 卡片整卡点击跳转
+        document.querySelectorAll('.workbench-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const href = card.getAttribute('data-href');
+                if (href && !e.target.closest('a')) {
+                    window.location.href = href;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

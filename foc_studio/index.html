@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=20260831_butterfly_v1">
+    <title>G3507 FOC Studio · 高性能电机控制台</title>
+    <link rel="stylesheet" href="style.css?v=20260831_glass_select_v1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 极客点阵工程网格 & 物理光追 Canvas 背景 -->
+    <div class="dot-matrix-grid"></div>
+    <canvas id="auroraCanvas"></canvas>
+
+    <header class="topbar">
+        <div class="brand-container">
+            <a href="../index.html" class="hub-back-btn" title="返回统一总平台">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                <span>总平台</span>
+            </a>
+            <div class="brand-badge">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+            </div>
+            <span class="brand">G3507 FOC Studio</span>
+            <div class="brand-tags">
+                <span class="chip-badge">MSPM0G3507</span>
+            </div>
+        </div>
+        <div class="connection-area">
+            <div class="connection-pill">
+                <span id="connectionIndicator" class="status-dot offline"></span>
+                <span id="connectionText" class="connection-text">未连接</span>
+                <span class="baud-label">460,800 · 8N1</span>
+            </div>
+            <button id="btnOpenOtaModal" class="btn-ota-trigger" title="打开固件 OTA 升级面板">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                <span>固件升级 (OTA)</span>
+            </button>
+            <button id="btnMockSim" class="btn-mock-sim" title="无硬件时开启 1kHz FOC 全真信号仿真">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                <span>仿真演示</span>
+            </button>
+            <button id="btnConnect" class="btn-primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"></path>
+                    <path d="M12 5l7 7-7 7"></path>
+                </svg>
+                <span>连接串口</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="workspace">
+        <!-- 左侧控制看板（4个卡片，与右侧2个大卡片严格等高） -->
+        <section class="left-column">
+            <!-- 1. 实时遥测 -->
+            <article class="card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <div class="card-icon icon-teal">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2>实时遥测</h2>
+                            <p>0x44 JustFloat 5通道数据流</p>
+                        </div>
+                    </div>
+                    <span id="telemetryBadge" class="badge neutral">已关闭</span>
+                </div>
+                <div class="button-row">
+                    <button id="btnTelemetryStart" class="btn-success requires-connection" disabled>开启遥测</button>
+                    <button id="btnTelemetryStop" class="btn-secondary requires-connection" disabled>关闭遥测</button>
+                </div>
+                <div class="form-group">
+                    <label class="field-label" for="telemetryMode">通道数据解析格式</label>
+                    <select id="telemetryMode" class="custom-select">
+                        <option value="auto" selected>自动识别（推荐）</option>
+                        <option value="run">运行状态 (1 kHz)</option>
+                        <option value="standby">失能待机 (1 Hz)</option>
+                        <option value="calibration">MT6826 自校准 (100 Hz)</option>
+                        <option value="raw">原始 CH1～CH5</option>
+                    </select>
+                </div>
+                <div id="telemetrySchemaHint" class="inline-notice">等待普通遥测数据以识别字段格式</div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <span>有效帧</span>
+                        <strong id="statFrames">0</strong>
+                    </div>
+                    <div class="stat-box">
+                        <span>估算帧率</span>
+                        <strong id="statRate">0 Hz</strong>
+                    </div>
+                    <div class="stat-box">
+                        <span>重同步字节</span>
+                        <strong id="statResync">0</strong>
+                    </div>
+                    <div class="stat-box">
+                        <span>无效浮点帧</span>
+                        <strong id="statInvalid">0</strong>
+                    </div>
+                    <div class="stat-box full-width">
+                        <span>最近接收</span>
+                        <strong id="statLastRx">--</strong>
+                    </div>
+                </div>
+            </article>
+
+            <!-- 2. 电机启停安全卡片 -->
+            <article class="card safety-card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <div class="card-icon icon-red">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 8v4"></path>
+                                <path d="M12 16h.01"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2>电机启停控制</h2>
+                            <p>硬件急停最高优先级响应</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="button-row">
+                    <button id="btnEnable" class="btn-success requires-connection" disabled>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <span>使能 0x01</span>
+                    </button>
+                    <button id="btnDisable" class="btn-danger emergency requires-connection" disabled>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                        <span>立即失能 0x02</span>
+                    </button>
+                </div>
+                <div id="commandState" class="inline-notice">尚未发送控制命令</div>
+            </article>
+
+            <!-- 3. 运动控制指令 -->
+            <article class="card motion-command-card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <div class="card-icon icon-blue">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2>运动指令</h2>
+                            <p>自动换算并下发 Q24 协议定点值</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="command-grid">
+                    <div class="command-row">
+                        <label for="inputCurrent" class="command-static-label">Iq 电流</label>
+                        <div class="input-unit">
+                            <input id="inputCurrent" type="number" min="-1.5" max="1.5" step="0.01" value="0">
+                            <span class="unit-tag">A</span>
+                        </div>
+                        <button data-motion="current" class="btn-secondary requires-connection" disabled>发送</button>
+                    </div>
+
+                    <div class="command-row has-mode-select">
+                        <select id="speedMode" class="command-mode-select" aria-label="速度控制模式">
+                            <option value="speed">普通速度</option>
+                            <option value="lowSpeedTorque">低速大力矩</option>
+                        </select>
+                        <div class="input-unit">
+                            <input id="inputSpeed" type="number" min="-100" max="100" step="0.1" value="0">
+                            <span class="unit-tag">Hz</span>
+                        </div>
+                        <button data-motion="speed" class="btn-secondary requires-connection" disabled>发送</button>
+                    </div>
+
+                    <div class="command-row">
+                        <label for="inputPosition" class="command-static-label">绝对位置</label>
+                        <div class="input-unit">
+                            <input id="inputPosition" type="number" min="-10" max="10" step="0.01" value="0">
+                            <span class="unit-tag">圈</span>
+                        </div>
+                        <button data-motion="position" class="btn-secondary requires-connection" disabled>发送</button>
+                    </div>
+
+                    <div class="command-row has-mode-select">
+                        <select id="stepMode" class="command-mode-select" aria-label="相对位置控制模式">
+                            <option value="step">梯形步进</option>
+                            <option value="directStep">直接阶跃</option>
+                        </select>
+                        <div class="input-unit">
+                            <input id="inputStep" type="number" min="-2" max="2" step="0.01" value="0">
+                            <span class="unit-tag">圈</span>
+                        </div>
+                        <button data-motion="step" class="btn-secondary requires-connection" disabled>发送</button>
+                    </div>
+                </div>
+            </article>
+
+            <!-- 4. 维护与配置（底边与右侧 LADRC 卡片底边严格平齐） -->
+            <article class="card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <div class="card-icon icon-purple">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2>维护与零点标定</h2>
+                            <p>必须在电机失能状态下操作</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="maintenance-grid">
+                    <button id="btnClearElectricalZero" class="btn-secondary requires-connection" disabled>擦除电气零点 0x03</button>
+                    <button id="btnEncoderCalibration" class="btn-secondary requires-connection" disabled>MT6826 自校准 0x6A</button>
+                    <button id="btnSetTempZero" class="btn-secondary requires-connection" disabled>临时业务零点 0xA2</button>
+                    <button id="btnSaveZero" class="btn-secondary requires-connection" disabled>永久业务零点 0xB2</button>
+                </div>
+                <div class="motor-id-card">
+                    <div class="motor-id-info">
+                        <span>当前生效 Motor ID</span>
+                        <strong id="currentMotorId">未知</strong>
+                        <small id="motorIdReadbackHint">等待失能待机帧回传</small>
+                    </div>
+                </div>
+                <div class="command-row motor-id-row">
+                    <label for="inputMotorId">设定 ID</label>
+                    <div class="input-unit">
+                        <input id="inputMotorId" type="number" min="0" max="9" step="1" value="0">
+                        <span class="unit-tag">0～9</span>
+                    </div>
+                    <button id="btnSetMotorId" class="btn-secondary requires-connection" disabled>写入 Flash</button>
+                </div>
+            </article>
+        </section>
+
+        <!-- 右侧主控制面板（示波器 + LADRC矩阵，与左侧4个卡片等高严格对齐） -->
+        <section class="center-column">
+            <!-- 1. 实时示波器 -->
+            <article class="card plot-card">
+                <div class="card-header plot-toolbar">
+                    <div class="card-title-group">
+                        <div class="card-icon icon-blue">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                <line x1="8" y1="21" x2="16" y2="21"></line>
+                                <line x1="12" y1="17" x2="12" y2="21"></line>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2>实时动态示波器</h2>
+                            <p>60FPS 原生硬件加速 · 10,000 点全周期缓冲</p>
+                        </div>
+                    </div>
+                    <div class="button-row compact">
+                        <div class="fps-select-wrapper" style="display:flex;align-items:center;margin-right:4px;">
+                            <select id="selectPlotFps" class="select-modern" style="padding:4px 8px;font-size:12px;border-radius:6px;border:1px solid rgba(203,213,225,0.8);background:#fff;color:#334155;font-weight:600;cursor:pointer;">
+                                <option value="60" selected>60 FPS 极速</option>
+                                <option value="30">30 FPS 节能</option>
+                            </select>
+                        </div>
+                        <button id="btnPausePlot" class="btn-secondary">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                            <span>暂停曲线</span>
+                        </button>
+                        <button id="btnClearMarkers" class="btn-secondary" title="清除双击固定的 VOFA+ 差值测量游标 (或按 ESC)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            <span>清除游标</span>
+                        </button>
+                        <button id="btnClearPlot" class="btn-secondary">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            <span>清空</span>
+                        </button>
+                        <button id="btnExportCsv" class="btn-secondary">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>导出 CSV</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="channelLegend" class="channel-legend"></div>
+
+                <div class="canvas-shell">
+                    <canvas id="plotCanvas"></canvas>
+                    <div id="plotEmpty" class="plot-empty">
+                        <div class="empty-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                            </svg>
+                        </div>
+                        <div>连接串口并开启遥测后显示波形</div>
+                    </div>
+                    <div id="plotTooltip" class="plot-tooltip"></div>
+                    <div id="plotAxisHint" class="plot-axis-hint"></div>
+                </div>
+
+                <!-- 历史全景范围滑条 -->
+                <div id="plotOverview" class="plot-overview" title="完整缓存范围；拖动两端手柄修改 X 轴起止边界">
+                    <div id="plotOverviewWindow" class="plot-overview-window"></div>
+                    <button id="plotOverviewStart" class="plot-overview-handle start" type="button" aria-label="X轴开始边界"></button>
+                    <button id="plotOverviewEnd" class="plot-overview-handle end" type="button" aria-label="X轴结束边界"></button>
+                    <span id="plotOverviewLatest" class="plot-overview-latest" title="最新数据位置"></span>
+                </div>
+
+                <div class="plot-x-controls">
+                    <label class="checkbox-label"><input id="xAuto" type="checkbox" checked> <span>Auto 跟随最新</span></label>
+                    <div class="badge-tag">Δt: <strong id="plotDeltaT">1 ms</strong></div>
+                    <div class="badge-tag">容量: <strong>10000 / ch</strong></div>
+                    <div class="badge-tag"><strong id="plotXDiv">200 ms / div</strong></div>
+                    <div class="x-input-group">
+                        <label>起点 <input id="plotXStart" type="number" step="any" value="0"> ms</label>
+                        <label>终点 <input id="plotXEnd" type="number" step="any" value="2000"> ms</label>
+                    </div>
+                </div>
+
+                <div class="plot-footer">
+                    <label class="checkbox-label"><input id="autoScale" type="checkbox" checked> <span>Y 轴自动量程</span></label>
+                    <span class="plot-help-tip">滚轮缩放 X 轴 · Ctrl+滚轮缩放 Y 轴 · 拖动平移 · 双击图例独占显示</span>
+                    <span id="plotRange" class="plot-range-indicator">Y: --</span>
+                </div>
+            </article>
+
+            <!-- 2. LADRC 参数配置（底边与左侧【维护与零点标定】底边精确对齐） -->
+            <article class="card ladrc-card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <div class="card-icon icon-amber">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2>LADRC 控制器矩阵</h2>
+                            <p>修改先入 RAM · 校验后一键写入 0x1F000 Flash 独立扇区</p>
+                        </div>
+                    </div>
+                    <span id="ladrcGlobalStatus" class="badge neutral">尚未查询</span>
+                </div>
+                <div class="ladrc-actions">
+                    <button id="btnQueryAll" class="btn-primary requires-connection" disabled>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"></path></svg>
+                        <span>查询全部 0xD0</span>
+                    </button>
+                    <button id="btnSaveLadrc" class="btn-success requires-connection" disabled>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        <span>保存全部到 Flash 0xD2</span>
+                    </button>
+                    <button id="btnRestoreLadrc" class="btn-warning requires-connection" disabled>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                        <span>恢复代码默认值 0xD3</span>
+                    </button>
+                </div>
+                <div id="ladrcGroups" class="ladrc-groups"></div>
+                <div class="inline-notice notice-subtle">⚠️ 调参指令受固件安全保护，仅在电机失能、非标定且 CAN 控制权释放（静默 500 ms）后允许执行。</div>
+            </article>
+        </section>
+
+        <!-- 最底部横贯全宽的长长通信监控控制台 (Full-width Footer) -->
+        <section class="bottom-full">
+            <article class="card log-card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <div class="card-icon icon-blue">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="4 17 10 11 4 5"></polyline>
+                                <line x1="12" y1="19" x2="20" y2="19"></line>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2>通信监控控制台</h2>
+                            <p>实时双向十六进制指令流诊断 · 纯净前端内存记录</p>
+                        </div>
+                    </div>
+                    <button id="btnClearLog" class="btn-secondary">清空日志</button>
+                </div>
+                <div id="logOutput" class="log-output"></div>
+            </article>
+        </section>
+    </main>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- OTA 固件升级模态对话框 (支持预置固件库与本地上传双模式) -->
+    <div id="otaModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card ota-card">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon-badge">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    </div>
+                    <div>
+                        <h3 class="modal-title">MSPM0 G3507 固件 OTA 升级</h3>
+                        <p class="modal-subtitle">Bootloader 460,800 · CRC32 小端 256B 分包极速写入</p>
+                    </div>
+                </div>
+                <button id="btnCloseOtaModal" class="btn-close-modal" title="关闭">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- 固件来源双 Tab 切换 -->
+                <div class="ota-tabs">
+                    <button id="tabPresetFirmware" class="ota-tab-btn active">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                        <span>预置固件库 (firmware/)</span>
+                    </button>
+                    <button id="tabCustomFirmware" class="ota-tab-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <span>本地上传 (.bin)</span>
+                    </button>
+                </div>
+
+                <!-- 视图 1: 预置固件库选择器 -->
+                <div id="otaPresetSection" class="ota-view-section">
+                    <div class="preset-select-wrap">
+                        <label for="selectPresetFirmware" class="select-label">选择预置固件版本：</label>
+                        <select id="selectPresetFirmware" class="select-modern ota-select"></select>
+                    </div>
+                    <div id="presetDesc" class="preset-desc-box">--</div>
+                </div>
+
+                <!-- 视图 2: 本地拖拽上传区 -->
+                <div id="otaUploadSection" class="ota-view-section" style="display: none;">
+                    <div id="otaDropZone" class="ota-drop-zone">
+                        <input type="file" id="otaFileInput" accept=".bin" style="display: none;">
+                        <div class="drop-icon">📤</div>
+                        <div class="drop-text-primary">点击选择或将本地 FOC 固件 (.bin) 拖入此处</div>
+                        <div class="drop-text-secondary">可将常用固件放入 foc_studio/firmware/ 目录下统一管理</div>
+                    </div>
+                </div>
+
+                <!-- 固件元信息卡片 -->
+                <div id="otaFileInfo" class="ota-file-info">
+                    <div class="info-item">
+                        <span class="info-label">固件名称</span>
+                        <span id="otaFileName" class="info-val">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">文件大小</span>
+                        <span id="otaFileSize" class="info-val">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">整包 CRC32</span>
+                        <span id="otaFileCrc" class="info-val font-mono">--</span>
+                    </div>
+                </div>
+
+                <!-- 6步状态指示器 -->
+                <div class="ota-stepper">
+                    <div class="step-item" id="stepTrigger"><span class="step-dot"></span><span>1. 进入口令</span></div>
+                    <div class="step-item" id="stepHandshake"><span class="step-dot"></span><span>2. 握手</span></div>
+                    <div class="step-item" id="stepErase"><span class="step-dot"></span><span>3. 擦除</span></div>
+                    <div class="step-item" id="stepData"><span class="step-dot"></span><span>4. 写入</span></div>
+                    <div class="step-item" id="stepVerify"><span class="step-dot"></span><span>5. 校验</span></div>
+                    <div class="step-item" id="stepComplete"><span class="step-dot"></span><span>6. 重启</span></div>
+                </div>
+
+                <!-- 进度看板 -->
+                <div class="ota-progress-section">
+                    <div class="progress-bar-wrap">
+                        <div id="otaProgressBar" class="progress-bar-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="progress-meta">
+                        <span id="otaPercentText" class="meta-percent">0.0%</span>
+                        <span id="otaSpeedText" class="meta-speed">0.0 KB/s</span>
+                        <span id="otaBytesText" class="meta-bytes">0 / 0 B</span>
+                    </div>
+                </div>
+
+                <!-- 日志视窗 (浅色优雅工控风) -->
+                <div class="ota-log-wrap">
+                    <div class="log-header">
+                        <span>升级实时诊断日志</span>
+                        <button id="btnClearOtaLog" class="btn-mini-action">清空</button>
+                    </div>
+                    <div id="otaLogConsole" class="ota-log-console">
+                        <div class="log-entry log-info">[系统就绪] 请选择固件并点击开始升级</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="btnAbortOta" class="btn-ota-secondary" disabled>中止升级</button>
+                <button id="btnStartOta" class="btn-ota-primary" disabled>开始 OTA 升级</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="firmware/firmware_info.js?v=25"></script>
+    <script src="firmware/firmware_data.js?v=25"></script>
+    <script src="serial.js?v=27"></script>
+    <script src="ota_engine.js?v=24"></script>
+    <script src="plot.js?v=24"></script>
+    <script src="custom_select.js?v=20260831_glass_select_v1"></script>
+    <script src="app.js?v=20260831_glass_select_v1"></script>
+    <script src="../aurora.js?v=20260829_sub_physics_v1"></script>
+</body>
+</html>

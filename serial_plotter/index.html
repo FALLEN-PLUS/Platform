@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=20260831_butterfly_v1">
+    <title>Universal Web Plotter · 现代化通用串口示波器</title>
+<link rel="stylesheet" href="style.css?v=20260831_select_v1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 极客点阵工程网格 & 物理光追 Canvas 背景 -->
+    <div class="dot-matrix-grid"></div>
+    <canvas id="auroraCanvas"></canvas>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <div class="app-layout">
+        <!-- 顶栏导航与通信配置 (原生经典尺寸·杜绝拥挤) -->
+        <header class="app-header">
+            <div class="header-left">
+                <a href="../index.html" class="back-home-btn" title="返回总平台">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    <span>总平台</span>
+                </a>
+                <div class="brand-divider"></div>
+                <div class="brand-badge">
+                    <div class="brand-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                    </div>
+                    <span class="brand-name">Universal Plotter</span>
+                </div>
+            </div>
+
+            <!-- 通信引擎快速配置栏 -->
+            <div class="header-center">
+                <div class="config-bar">
+                    <!-- 波特率选择 -->
+                    <div class="config-item">
+                        <label for="selectBaudRate">波特率</label>
+                        <select id="selectBaudRate" class="select-modern">
+                            <option value="9600">9,600</option>
+                            <option value="19200">19,200</option>
+                            <option value="38400">38,400</option>
+                            <option value="57600">57,600</option>
+                            <option value="115200">115,200</option>
+                            <option value="230400">230,400</option>
+                            <option value="460800" selected>460,800</option>
+                            <option value="921600">921,600</option>
+                            <option value="1000000">1,000,000</option>
+                            <option value="2000000">2,000,000</option>
+                        </select>
+                    </div>
+
+                    <!-- 协议引擎选择 -->
+                    <div class="config-item">
+                        <label for="selectProtocol">数据协议</label>
+                        <select id="selectProtocol" class="select-modern">
+                            <option value="firewater">VOFA+ FireWater (文本 CSV)</option>
+                            <option value="justfloat" selected>JustFloat (标准二进制浮点)</option>
+                            <option value="raw">Raw 原始终端文本</option>
+                        </select>
+                    </div>
+
+                    <!-- 渲染性能与节流模式 -->
+                    <div class="config-item">
+                        <label for="selectFps">渲染帧率</label>
+                        <select id="selectFps" class="select-modern">
+                            <option value="30">30 FPS (节能推荐)</option>
+                            <option value="60" selected>60 FPS (极速流畅)</option>
+                        </select>
+                    </div>
+
+                    <!-- 通道模式与防错位锁定 -->
+                    <div class="config-item">
+                        <label for="selectChannelMode">通道防串锁定</label>
+                        <select id="selectChannelMode" class="select-modern">
+                            <option value="0" selected>自动稳态识别</option>
+                            <option value="1">固定 1 通道</option>
+                            <option value="2">固定 2 通道</option>
+                            <option value="3">固定 3 通道</option>
+                            <option value="4">固定 4 通道</option>
+                            <option value="5">固定 5 通道</option>
+                            <option value="6">固定 6 通道</option>
+                            <option value="8">固定 8 通道</option>
+                            <option value="10">固定 10 通道</option>
+                            <option value="12">固定 12 通道</option>
+                            <option value="16">固定 16 通道</option>
+                        </select>
+                    </div>
+
+                    <!-- 连接按钮 -->
+                    <button id="btnConnect" class="btn-connect-ready">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path>
+                        </svg>
+                        <span>连接串口</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右侧状态与仿真 -->
+            <div class="header-right">
+                <button id="btnMockSim" class="btn-mock" title="无物理硬件时一键开启 1kHz 4通道多波形全真仿真">
+                    <span class="mock-pulse"></span>
+                    <span>1kHz 仿真演示</span>
+                </button>
+                <div class="status-capsule">
+                    <span id="connectionIndicator" class="status-dot offline"></span>
+                    <span id="connectionText">未连接</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 示波器主体核心 (结构完全不变，仅画布区域就地支持波形/3D切换) -->
+        <main class="plotter-main">
+            <!-- 示波器主卡片 -->
+            <section class="plot-card">
+                <!-- 示波器顶栏工具箱 -->
+                <div class="plot-toolbar">
+                    <div class="toolbar-left">
+                        <!-- 紧凑胶囊视图切换开关 -->
+                        <div class="stage-mode-switch" title="切换视图：实时动态波形 或 3D 姿态正方体">
+                            <button id="btnModePlot" class="btn-stage-tab active" type="button">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                                <span>实时波形</span>
+                            </button>
+                            <button id="btnModeCube" class="btn-stage-tab" type="button">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                                <span>3D 姿态</span>
+                            </button>
+                        </div>
+
+                        <div class="stat-pill">采样率: <strong id="statRate">0 Hz</strong></div>
+                        <div class="stat-pill">数据帧: <strong id="statFrames">0</strong></div>
+                        <div class="stat-pill">已识别通道: <strong id="statChannels">0</strong></div>
+                    </div>
+                    <div class="toolbar-right">
+                        <button id="btnPausePlot" class="btn-tool">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                            <span>暂停曲线</span>
+                        </button>
+                        <button id="btnClearMarkers" class="btn-tool" title="清除双击固定的 VOFA+ 差值测量游标 (或按 ESC)">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            <span>清除游标</span>
+                        </button>
+                        <button id="btnClearPlot" class="btn-tool">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            <span>清空</span>
+                        </button>
+                        <button id="btnExportCsv" class="btn-tool">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>导出 CSV</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 自适应动态通道图例 -->
+                <div id="channelLegend" class="channel-legend">
+                    <span class="legend-placeholder">等待接收串口数据以自动识别通道...</span>
+                </div>
+
+                <!-- 核心画布区域舞台 (尺寸和原来 100% 一模一样，波形与 3D 在同个容器就地替换) -->
+                <div class="canvas-shell">
+                    <!-- 波形 Canvas 画布 -->
+                    <canvas id="plotCanvas"></canvas>
+                    <div id="plotEmpty" class="plot-empty">
+                        <div class="empty-icon">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                            </svg>
+                        </div>
+                        <div class="empty-text">选择波特率并连接串口，或点击右上角开启仿真演示</div>
+                        <div class="empty-sub">支持 FireWater 文本格式 (如 <code>printf("1.2, 3.4\n")</code>) 及 JustFloat 二进制格式</div>
+                    </div>
+                    <div id="plotTooltip" class="plot-tooltip"></div>
+                    <div id="plotAxisHint" class="plot-axis-hint"></div>
+
+                    <!-- 3D 姿态 Canvas 画布 (尺寸 100% 充满 canvas-shell) -->
+                    <canvas id="imuCanvas" style="display:none;"></canvas>
+
+                    <!-- 3D 顶部悬浮微调控制条 (仅 3D 模式下显示) -->
+                    <div id="cubeOverlayBar" class="cube-overlay-bar" style="display:none;">
+                        <div class="cube-map-pills">
+                            <div class="map-pill">
+                                <span class="map-tag x">Roll (X):</span>
+                                <select id="selectMapRoll" class="select-overlay">
+                                    <option value="0" selected>CH1</option><option value="1">CH2</option><option value="2">CH3</option><option value="3">CH4</option><option value="4">CH5</option><option value="5">CH6</option><option value="6">CH7</option><option value="7">CH8</option>
+                                </select>
+                            </div>
+                            <div class="map-pill">
+                                <span class="map-tag y">Pitch (Y):</span>
+                                <select id="selectMapPitch" class="select-overlay">
+                                    <option value="0">CH1</option><option value="1" selected>CH2</option><option value="2">CH3</option><option value="3">CH4</option><option value="4">CH5</option><option value="5">CH6</option><option value="6">CH7</option><option value="7">CH8</option>
+                                </select>
+                            </div>
+                            <div class="map-pill">
+                                <span class="map-tag z">Yaw (Z):</span>
+                                <select id="selectMapYaw" class="select-overlay">
+                                    <option value="0">CH1</option><option value="1">CH2</option><option value="2" selected>CH3</option><option value="3">CH4</option><option value="4">CH5</option><option value="5">CH6</option><option value="6">CH7</option><option value="7">CH8</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="cube-angle-readout">
+                            <span class="readout-item x">Roll: <strong id="cubeValRoll">0.00°</strong></span>
+                            <span class="readout-item y">Pitch: <strong id="cubeValPitch">0.00°</strong></span>
+                            <span class="readout-item z">Yaw: <strong id="cubeValYaw">0.00°</strong></span>
+                        </div>
+
+                        <div class="cube-btn-group">
+                            <button id="btnCubeTare" class="btn-overlay-tool" title="将当前姿态设为零位偏置">归零 Tare</button>
+                            <button id="btnCubeReset" class="btn-overlay-tool" title="复位视角与偏置">视角复位</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 历史全景范围滑条 (Minimap) 原封不动保留 -->
+                <div id="plotOverview" class="plot-overview" title="全局缓存时间轴；拖动两端手柄可缩放与平移视口">
+                    <div id="plotOverviewWindow" class="plot-overview-window"></div>
+                    <button id="plotOverviewStart" class="plot-overview-handle start" type="button" aria-label="开始边界"></button>
+                    <button id="plotOverviewEnd" class="plot-overview-handle end" type="button" aria-label="结束边界"></button>
+                    <span id="plotOverviewLatest" class="plot-overview-latest" title="最新数据流位置"></span>
+                </div>
+
+                <!-- X 轴控制栏 原封不动保留 -->
+                <div class="plot-x-controls">
+                    <label class="checkbox-label"><input id="xAuto" type="checkbox" checked> <span>Auto 跟随最新</span></label>
+                    <div class="badge-tag"><strong id="plotXDiv">200 ms / div</strong></div>
+                    <div class="x-input-group">
+                        <label>起点 <input id="plotXStart" type="number" step="any" value="0"> ms</label>
+                        <label>终点 <input id="plotXEnd" type="number" step="any" value="2000"> ms</label>
+                    </div>
+                    <label class="checkbox-label" style="margin-left:auto;"><input id="autoScale" type="checkbox" checked> <span>Y 轴自动量程</span></label>
+                    <span id="plotRange" class="plot-range-indicator">Y: --</span>
+                </div>
+            </section>
+
+            <!-- 底部极简交互终端 原封不动保留 -->
+            <section class="terminal-card">
+                <div class="terminal-header">
+                    <div class="terminal-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                        <span>串口调试监视终端</span>
+                        <small id="statBytes" style="color:var(--text-muted);font-family:var(--font-mono)">0 bytes</small>
+                    </div>
+                    <div class="terminal-actions" style="display:flex;align-items:center;gap:10px;">
+                        <label class="terminal-opt-label">接收格式:
+                            <select id="terminalRxMode" class="select-mini">
+                                <option value="ascii" selected>ASCII 文本</option>
+                                <option value="hex">HEX 十六进制</option>
+                            </select>
+                        </label>
+                        <label class="terminal-opt-label">
+                            <input id="chkAutoScroll" type="checkbox" checked> 自动滚屏
+                        </label>
+                        <button id="btnClearLog" class="btn-tool-sm">清屏</button>
+                    </div>
+                </div>
+                <div id="terminalOutput" class="terminal-output"></div>
+                <!-- 底部快捷发送栏 (统一高颜值工控纯白) -->
+                <div class="terminal-send-bar">
+                    <select id="terminalTxMode" class="select-send-opt" title="发送格式">
+                        <option value="ascii" selected>TXT 文本</option>
+                        <option value="hex">HEX 16进制</option>
+                    </select>
+
+                    <div class="send-input-wrap">
+                        <input id="inputSend" type="text" placeholder="输入指令 (如 STOP 或 FF 01 02 FE) 并按 Enter 发送..." class="input-cmd-line">
+                    </div>
+
+                    <select id="terminalTxEnding" class="select-send-opt" title="追加结束符">
+                        <option value="crlf" selected>\r\n</option>
+                        <option value="lf">\n</option>
+                        <option value="none">无追加</option>
+                    </select>
+
+                    <button id="btnToggleSendHistory" class="btn-tool-icon" title="查看最近 10 条发送历史">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <span class="arrow-down">▾</span>
+                    </button>
+
+                    <button id="btnSend" class="btn-send-tool requires-connection" disabled>发送</button>
+
+                    <!-- 向上弹出的发送历史记录浮层 -->
+                    <div id="historyPopup" class="history-popup-card" style="display:none;">
+                        <div class="history-header">
+                            <span>最近发送历史 (最多 10 条)</span>
+                            <button id="btnClearAllHistory" class="btn-mini-history-clear">清空全部</button>
+                        </div>
+                        <div id="historyList" class="history-list-box">
+                            <div class="history-empty-hint">暂无发送历史记录</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="serial_engine.js?v=20260827_light_v3"></script>
+    <script src="cube_renderer.js?v=20260827_light_v3"></script>
+<script src="plotter.js?v=20260827_light_v3"></script>
+<script src="custom_select.js?v=20260831_select_v1"></script>
+<script src="app.js?v=20260827_light_v3"></script>
+    <script src="../aurora.js?v=20260829_sub_physics_v1"></script>
+</body>
+</html>

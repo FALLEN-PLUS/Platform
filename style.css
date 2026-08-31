@@ -1,0 +1,612 @@
+/* ==========================================================================
+   Embedded Hardware Studio · Linear / Apple Pro Precision Suite
+   大厂大气简约 · 单色物理光追 · 精密等宽排版 · 纯净微晶 Bento 容器
+   ========================================================================== */
+
+:root {
+    color-scheme: light;
+
+    /* 纯净晨曦冷白基底与高透微晶表面 (58% 纯澈通透微晶折射) */
+    --bg-base: #F8FAFC;
+    --bg-card: rgba(255, 255, 255, 0.58);
+    --bg-card-hover: rgba(255, 255, 255, 0.76);
+    
+    /* 1px 严谨微晶发丝切边 */
+    --border-card: rgba(255, 255, 255, 0.85);
+    --border-card-hover: rgba(255, 255, 255, 0.98);
+
+    /* 文本色阶 (Apple / Linear 极简深空墨黑体系 · 高信噪比) */
+    --text-primary: #090D16;
+    --text-secondary: #334155;
+    --text-muted: #64748B;
+    --text-light: #94A3B8;
+
+    /* 4 大子系统点缀色 (克制、高雅、不喧宾夺主) */
+    --theme-foc: #0071E3;
+    --theme-h7: #5E5CE6;
+    --theme-plotter: #0284C7;
+    --theme-imu: #D97706;
+
+    /* 字体规范 */
+    --font-heading: "Outfit", "Plus Jakarta Sans", "Microsoft YaHei UI", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-body: "Plus Jakarta Sans", "Microsoft YaHei UI", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", "SF Mono", monospace;
+
+    /* 默认物理接触阴影 (由 JS 光追引擎实时接管计算) */
+    --shadow-card: 
+        0 4px 8px -1px rgba(15, 23, 42, 0.035),
+        0 20px 36px -10px rgba(15, 23, 42, 0.055),
+        inset 0 1.5px 1px 0 #FFFFFF,
+        inset 0 -1px 1px 0 rgba(255, 255, 255, 0.40);
+        
+    --shadow-hover: 
+        0 8px 16px -4px rgba(15, 23, 42, 0.04),
+        0 32px 64px -14px rgba(15, 23, 42, 0.085),
+        inset 0 2px 1.5px 0 #FFFFFF,
+        inset 0 -1px 1px 0 rgba(255, 255, 255, 0.60);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 100%;
+    min-height: 100vh;
+    font-family: var(--font-body);
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    line-height: 1.5;
+}
+
+/* 细腻工程底板点阵 */
+.dot-matrix-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: 
+        radial-gradient(rgba(15, 23, 42, 0.050) 1px, transparent 1px),
+        linear-gradient(to right, rgba(15, 23, 42, 0.015) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(15, 23, 42, 0.015) 1px, transparent 1px);
+    background-size: 32px 32px, 160px 160px, 160px 160px;
+    z-index: 1;
+    pointer-events: none;
+    mask-image: radial-gradient(circle at 50% 45%, black 75%, transparent 98%);
+    -webkit-mask-image: radial-gradient(circle at 50% 45%, black 75%, transparent 98%);
+}
+
+/* 单色自然天光 Canvas (物理超柔漫射) */
+#auroraCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+    filter: blur(40px);
+    -webkit-filter: blur(40px);
+    transform: translateZ(0);
+}
+
+/* ==========================================================================
+   主舞台 (大气质朴 · 舒展层次 · 纵向自然分布)
+   ========================================================================== */
+.hub-main-stage {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 1320px;
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 64px 40px 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 52px;
+}
+
+/* ==========================================================================
+   顶部标题区 (Linear / Apple Pro 工业级 · 纯粹极简 · 刀锋排版)
+   ========================================================================== */
+.hero-intro {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    max-width: 1080px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* 1. 主标题 (Hero Title - 恢弘大气) */
+.hero-title {
+    font-family: var(--font-heading);
+    font-size: clamp(42px, 4.2vw, 54px);
+    font-weight: 800;
+    letter-spacing: -1.8px;
+    line-height: 1.10;
+    color: #0F172A;
+    background: none;
+    -webkit-text-fill-color: initial;
+    text-shadow: none;
+    margin: 0;
+}
+
+/* 2. 极简浏览器支持小标题栏 (Hero Subtitle Capsule - 下移舒展) */
+.hero-subtitle-capsule {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    padding: 7.5px 24px;
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.88);
+    border-radius: 999px;
+    box-shadow: 0 3px 14px rgba(15, 23, 42, 0.035), inset 0 1px 0 #ffffff;
+    transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hero-subtitle-capsule:hover {
+    background: rgba(255, 255, 255, 0.82);
+    border-color: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 5px 18px rgba(15, 23, 42, 0.05), inset 0 1px 0 #ffffff;
+}
+
+.browser-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 550;
+    color: #475569;
+    letter-spacing: -0.1px;
+}
+
+.browser-icon {
+    color: #64748B;
+    flex-shrink: 0;
+}
+
+.browser-dot-sep {
+    color: #CBD5E1;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+/* ==========================================================================
+   2x2 大气简约工作台网格 (下沉展开 · 空间充盈稳重)
+   ========================================================================== */
+.workbench-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    perspective: 1200px;
+}
+
+@media (max-width: 980px) {
+    .workbench-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.workbench-card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.68);
+    backdrop-filter: blur(28px) saturate(160%);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    border: 1px solid var(--border-card);
+    border-radius: 22px;
+    padding: 30px 34px 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 10px 30px rgba(34, 55, 72, 0.055), inset 0 1px 0 rgba(255,255,255,.9);
+    transition: 
+        background 0.30s ease,
+        border-color 0.30s ease,
+        box-shadow 0.15s ease-out;
+    overflow: hidden;
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+.workbench-card:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(156, 184, 202, .6);
+    box-shadow: 0 16px 34px rgba(34, 55, 72, 0.09), inset 0 1px 0 #fff;
+}
+
+.card-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+    position: relative;
+    z-index: 2;
+}
+
+/* 1. 卡片头部 (Header) */
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+}
+
+.workbench-card:hover .card-icon {
+    transform: scale(1.025);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.035), inset 0 1px 0 #FFFFFF;
+}
+
+.card-title-group {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.card-title {
+    font-family: var(--font-heading);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    color: var(--text-primary);
+    transition: color 0.25s ease;
+}
+
+.card-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    padding: 3.5px 9px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.90);
+    transition: all 0.25s ease;
+}
+
+/* 2. 描述文本 */
+.card-desc {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    font-weight: 450;
+}
+
+/* ==========================================================================
+   3. 核心指标矩阵 (3 组高透微晶 Bento 仪表舱)
+   ========================================================================== */
+.card-spec-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+}
+
+.spec-divider {
+    display: none;
+}
+
+.spec-item {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.90), 0 2px 6px rgba(15, 23, 42, 0.02);
+    transition: all 0.25s ease;
+}
+
+.workbench-card:hover .spec-item {
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(255, 255, 255, 0.90);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.03), inset 0 1px 0 #FFFFFF;
+}
+
+.spec-value {
+    font-family: var(--font-heading);
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.2px;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* 精密等宽数字排版 */
+    font-feature-settings: "tnum" 1, "cv02" 1, "cv03" 1, "cv04" 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.spec-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #475569;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.spec-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #475569;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   4. 底部 Footer (硬件总线与操作入口)
+   ========================================================================== */
+.card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.card-bus-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    vertical-align: middle;
+}
+
+.bus-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+    position: relative;
+    top: -0.5px;
+}
+
+.dot-foc { background: var(--theme-foc); box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.18); }
+.dot-h7 { background: var(--theme-h7); box-shadow: 0 0 0 2px rgba(94, 92, 230, 0.18); }
+.dot-plotter { background: var(--theme-plotter); box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.18); }
+.dot-imu { background: var(--theme-imu); box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.18); }
+
+.bus-text {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-feature-settings: "tnum" 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.card-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    font-weight: 650;
+    color: var(--text-secondary);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.card-action svg {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.workbench-card:hover .card-action svg {
+    transform: translateX(4px);
+}
+
+/* ==========================================================================
+   4 大子系统专属点缀 (纯净高级 · 绝无彩色边框光圈)
+   ========================================================================== */
+
+/* FOC 蓝色 */
+.card-foc-theme .card-icon-foc {
+    background: rgba(0, 113, 227, 0.08);
+    color: var(--theme-foc);
+    border: 1px solid rgba(0, 113, 227, 0.14);
+}
+.card-foc-theme:hover .card-title { color: var(--theme-foc); }
+.card-foc-theme:hover .card-badge {
+    color: var(--theme-foc);
+    border-color: rgba(0, 113, 227, 0.20);
+    background: rgba(0, 113, 227, 0.06);
+}
+.card-foc-theme:hover .card-action { color: var(--theme-foc); }
+
+/* H7RS 紫色 */
+.card-h7-theme .card-icon-h7 {
+    background: rgba(94, 92, 230, 0.08);
+    color: var(--theme-h7);
+    border: 1px solid rgba(94, 92, 230, 0.14);
+}
+.card-h7-theme:hover .card-title { color: var(--theme-h7); }
+.card-h7-theme:hover .card-badge {
+    color: var(--theme-h7);
+    border-color: rgba(94, 92, 230, 0.20);
+    background: rgba(94, 92, 230, 0.06);
+}
+.card-h7-theme:hover .card-action { color: var(--theme-h7); }
+
+/* Plotter 天青色 */
+.card-plotter-theme .card-icon-plotter {
+    background: rgba(2, 132, 199, 0.08);
+    color: var(--theme-plotter);
+    border: 1px solid rgba(2, 132, 199, 0.14);
+}
+.card-plotter-theme:hover .card-title { color: var(--theme-plotter); }
+.card-plotter-theme:hover .card-badge {
+    color: var(--theme-plotter);
+    border-color: rgba(2, 132, 199, 0.20);
+    background: rgba(2, 132, 199, 0.06);
+}
+.card-plotter-theme:hover .card-action { color: var(--theme-plotter); }
+
+/* IMU 琥珀色 */
+.card-imu-theme .card-icon-imu {
+    background: rgba(217, 119, 6, 0.08);
+    color: var(--theme-imu);
+    border: 1px solid rgba(217, 119, 6, 0.14);
+}
+.card-imu-theme:hover .card-title { color: var(--theme-imu); }
+.card-imu-theme:hover .card-badge {
+    color: var(--theme-imu);
+    border-color: rgba(217, 119, 6, 0.20);
+    background: rgba(217, 119, 6, 0.06);
+}
+.card-imu-theme:hover .card-action { color: var(--theme-imu); }
+
+/* ==========================================================================
+   多级自适应微调 (完美适配 600px~900px 多种屏幕高度，绝无滚动条)
+   ========================================================================== */
+@media (max-height: 860px) {
+    .hub-main-stage {
+        padding: 30px 24px 28px;
+        gap: 22px;
+    }
+    .hero-intro {
+        gap: 10px;
+    }
+    .hero-title {
+        font-size: 32px;
+        letter-spacing: -1.0px;
+    }
+    .hero-subtitle-capsule {
+        padding: 4.5px 14px;
+        gap: 10px;
+    }
+    .browser-item {
+        font-size: 11.5px;
+    }
+    .workbench-grid {
+        gap: 16px;
+    }
+    .workbench-card {
+        padding: 22px 24px 18px;
+        border-radius: 18px;
+    }
+    .card-inner {
+        gap: 14px;
+    }
+    .card-icon {
+        width: 44px;
+        height: 44px;
+    }
+    .card-title {
+        font-size: 18.5px;
+    }
+    .card-desc {
+        font-size: 13px;
+    }
+    .spec-item {
+        padding: 10px 12px;
+    }
+}
+
+@media (max-height: 720px) {
+    .hub-main-stage {
+        padding: 18px 20px 20px;
+        gap: 14px;
+    }
+    .hero-intro {
+        gap: 8px;
+    }
+    .hero-title {
+        font-size: 26px;
+        letter-spacing: -0.8px;
+    }
+    .hero-subtitle-capsule {
+        padding: 3.5px 12px;
+        gap: 8px;
+    }
+    .browser-item {
+        font-size: 10.5px;
+    }
+    .workbench-grid {
+        gap: 12px;
+    }
+    .workbench-card {
+        padding: 16px 20px 14px;
+        border-radius: 15px;
+    }
+    .card-inner {
+        gap: 10px;
+    }
+    .card-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+    }
+    .card-title {
+        font-size: 17px;
+    }
+    .card-desc {
+        font-size: 12px;
+        line-height: 1.45;
+    }
+    .spec-item {
+        padding: 7px 10px;
+        border-radius: 10px;
+    }
+    .spec-value {
+        font-size: 13px;
+    }
+    .spec-label {
+        font-size: 10px;
+    }
+    .card-footer {
+        padding-top: 8px;
+    }
+}
