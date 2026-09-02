@@ -39,6 +39,14 @@
                 <span id="connectionText" class="connection-text">未连接</span>
                 <span class="baud-label">460,800 · 8N1</span>
             </div>
+            <button id="btnOpenMusicModal" class="btn-music-trigger" title="打开在线电机音乐播放器">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 18V5l12-2v13"></path>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <circle cx="18" cy="16" r="3"></circle>
+                </svg>
+                <span>在线音乐 (Music)</span>
+            </button>
             <button id="btnOpenOtaModal" class="btn-ota-trigger" title="打开固件 OTA 升级面板">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
@@ -501,13 +509,93 @@
         </div>
     </div>
 
-    <script src="firmware/firmware_info.js?v=25"></script>
-    <script src="firmware/firmware_data.js?v=25"></script>
-    <script src="serial.js?v=27"></script>
+    <!-- ========================================== -->
+    <!-- 在线电机音乐工作站弹窗 (Music Modal) -->
+    <!-- ========================================== -->
+    <div id="musicModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card music-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon-badge music-badge">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 18V5l12-2v13"></path>
+                            <circle cx="6" cy="18" r="3"></circle>
+                            <circle cx="18" cy="16" r="3"></circle>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="modal-title">在线电机音乐工作站</h3>
+                        <p class="modal-subtitle">MP4视频 / MP3 / WAV / MIDI / 简谱 实时推流合成</p>
+                    </div>
+                </div>
+                <button id="btnCloseMusicModal" class="btn-close-modal" title="关闭">&times;</button>
+            </div>
+
+            <div class="modal-body music-body">
+                <!-- 拖拽导入区 -->
+                <div id="musicDropzone" class="music-dropzone">
+                    <input type="file" id="musicFileInput" accept=".mp4,.webm,.mp3,.wav,.ogg,.aac,.mid,.midi,.rtttl,.txt" style="display: none;">
+                    <div class="music-drop-icon">🎵</div>
+                    <div class="music-drop-text">点击选择或拖入音视频/MIDI/乐谱文件</div>
+                    <div class="music-drop-hints">支持 MP4, WebM, MP3, WAV, MIDI (.mid), 诺基亚铃声 (.rtttl), 简谱 (.txt)</div>
+                </div>
+
+                <!-- 视频同步播放视窗 (仅 MP4/WebM 时显示) -->
+                <div id="musicVideoWrapper" class="music-video-wrapper" style="display: none;">
+                    <video id="musicVideoPreview" class="music-video-player" playsinline muted></video>
+                </div>
+
+                <!-- 乐曲元信息卡片 -->
+                <div id="musicFileInfoCard" class="music-info-card" style="display: none;">
+                    <div class="music-info-icon">🎼</div>
+                    <div class="music-info-details">
+                        <div id="musicFileName" class="music-file-name">--</div>
+                        <div id="musicFileMeta" class="music-file-meta">--</div>
+                    </div>
+                    <div id="musicStatusPill" class="status-pill pill-idle">就绪</div>
+                </div>
+
+                <!-- 钢琴卷帘音符可视化 -->
+                <div class="music-canvas-wrap">
+                    <canvas id="musicPianoRoll" class="music-piano-roll"></canvas>
+                </div>
+
+                <!-- 推流进度与下位机状态 -->
+                <div class="music-progress-section">
+                    <div class="progress-bar-wrap">
+                        <div id="musicProgressBar" class="progress-bar-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="music-progress-meta">
+                        <span id="musicProgressText">等待推流...</span>
+                    </div>
+                </div>
+
+                <!-- 音量控制滑块 -->
+                <div class="music-control-panel">
+                    <div class="vol-control-group">
+                        <label for="musicVolSlider" class="vol-label">发声音量 (D轴电压):</label>
+                        <input type="range" id="musicVolSlider" min="100" max="1500" step="50" value="800" class="music-slider">
+                        <span id="musicVolValue" class="vol-value-badge">0.80 V</span>
+                    </div>
+                    <div class="music-safety-hint">💡 严格限幅 ≤1.5V；急停与 FOC 故障具有最高优先权，电机失能时自动禁音。</div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="btnMusicStop" class="btn-music-secondary" disabled>⏹ 停止播放</button>
+                <button id="btnMusicPlay" class="btn-music-primary" disabled>▶ 开始播放</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="firmware/firmware_info.js?v=29"></script>
+    <script src="firmware/firmware_data.js?v=29"></script>
+    <script src="serial.js?v=20260901_v5"></script>
+    <script src="audio_studio.js?v=20260901_v6"></script>
     <script src="ota_engine.js?v=24"></script>
     <script src="plot.js?v=24"></script>
     <script src="custom_select.js?v=20260831_glass_select_v1"></script>
-    <script src="app.js?v=20260831_glass_select_v1"></script>
+    <script src="app.js?v=20260901_v4"></script>
     <script src="../aurora.js?v=20260829_sub_physics_v1"></script>
 </body>
 </html>

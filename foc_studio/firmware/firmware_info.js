@@ -1,19 +1,22 @@
 "use strict";
 
-// 每次发布固件时只需要修改这里的版本、日期和说明。
-window.FOC_FIRMWARE_INFO = {
-    version: "2.5.0",
-    buildDate: "2026-08-31",
-    description: "MSPM0G3507 FOC 正式固件（含 0x06 低速大力矩与 0x70 直接位置阶跃）"
-};
-
 window.PRESET_FIRMWARES = [
     {
-        name: "FOC_G3507.bin",
-        path: "firmware/FOC_G3507.bin",
-        version: window.FOC_FIRMWARE_INFO.version,
-        desc: window.FOC_FIRMWARE_INFO.description,
-        dataVariable: "FOC_G3507_FIRMWARE_BASE64",
+        name: "FOC G3507 音乐版",
+        fileName: "FOC_G3507_MUSIC.bin",
+        path: "firmware/FOC_G3507_MUSIC.bin",
+        version: "2.6.4",
+        desc: "音乐版固件：包含在线电机音乐、音频会话隔离、安全互锁及串口/CAN 断联保护。",
+        dataVariable: "FOC_G3507_MUSIC_FIRMWARE_BASE64",
         isDefault: true
+    },
+    {
+        name: "FOC G3507 标准版",
+        fileName: "FOC_G3507_STANDARD.bin",
+        path: "firmware/FOC_G3507_STANDARD.bin",
+        version: "2.4",
+        desc: "标准版固件：保留原有电机控制功能，不包含在线音乐功能。",
+        dataVariable: "FOC_G3507_STANDARD_FIRMWARE_BASE64",
+        isDefault: false
     }
 ];

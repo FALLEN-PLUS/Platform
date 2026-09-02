@@ -21,6 +21,17 @@ const COMMAND = {
     LADRC_DEFAULTS: 0xD3
 };
 
+const AUDIO_EXCLUSIVE_COMMANDS = new Set([
+    COMMAND.CLEAR_ELECTRICAL_ZERO,
+    COMMAND.MOTOR_ID,
+    COMMAND.ENCODER_CALIBRATION,
+    COMMAND.TEMP_ZERO,
+    COMMAND.SAVE_ZERO,
+    COMMAND.LADRC_SET,
+    COMMAND.LADRC_SAVE,
+    COMMAND.LADRC_DEFAULTS
+]);
+
 const LADRC_GROUPS = [
     { name: "Q 轴电流环", shortName: "Q轴", dt: 0.0001, wcMax: 3000, woMax: 6553.5 },
     { name: "D 轴电流环", shortName: "D轴", dt: 0.0001, wcMax: 3000, woMax: 6553.5 },
@@ -60,6 +71,15 @@ const plot = new TelemetryPlot(
     }
 );
 
+async function stopMusicForSensitiveOperation()
+{
+    if (window.audioStudio && window.audioStudio.isPlaying)
+    {
+        // Why: 标定、零点和Flash操作期间不能让待机音频继续驱动功率桥。
+        await window.audioStudio.stopStreaming(null, true);
+    }
+}
+
 plot.onAutoScaleChange = enabled =>
 {
     element("autoScale").checked = enabled;
@@ -86,6 +106,8 @@ plot.onXViewChange = state =>
 
 const markerWaiters = new Map();
 const ladrcCurrentValues = Array.from({ length: 4 }, () => null);
+const audioStudio = new AudioStudio(serial);
+window.audioStudio = audioStudio;
 let frameWindowCount = 0;
 let frameWindowStart = performance.now();
 let plotPaused = false;
@@ -172,6 +194,10 @@ function updateConnectionUi(connected)
         element("motorIdReadbackHint").textContent = "等待失能待机帧";
         element("telemetrySchemaHint").textContent = "等待普通遥测数据以识别字段格式";
         rejectAllMarkerWaiters(new Error("串口已断开"));
+        if (window.audioStudio)
+        {
+            window.audioStudio.stopStreaming();
+        }
     }
 }
 
@@ -337,6 +363,10 @@ async function sendControl(command, rawData, name)
         showToast(`[仿真响应] ${name}已生效`, "success");
         return;
     }
+    if (AUDIO_EXCLUSIVE_COMMANDS.has(command))
+    {
+        await stopMusicForSensitiveOperation();
+    }
     await serial.sendCommand(command, rawData, 0);
     if (command === COMMAND.ENABLE)
     {
@@ -495,6 +525,10 @@ function rejectAllMarkerWaiters(error)
 
 async function sendAndWait(command, rawData, aux, marker, timeoutMs = 1500)
 {
+    if (AUDIO_EXCLUSIVE_COMMANDS.has(command))
+    {
+        await stopMusicForSensitiveOperation();
+    }
     const waiter = createMarkerWaiter(marker, timeoutMs);
     try
     {
@@ -649,6 +683,7 @@ async function restoreLadrcDefaults()
         return;
     }
 
+    await stopMusicForSensitiveOperation();
     const groupWaiters = [0, 1, 2, 3].map(group => createMarkerWaiter(-10000 - group, 2500));
     const failureWaiter = createMarkerWaiter(-10011, 2500);
     const allWaiters = [...groupWaiters, failureWaiter];
@@ -901,7 +936,14 @@ function bindEvents()
         }
     });
     element("btnEnable").addEventListener("click", () => runTask(() => sendControl(COMMAND.ENABLE, 0, "电机使能")));
-    element("btnDisable").addEventListener("click", () => runTask(() => sendControl(COMMAND.DISABLE, 0, "电机立即失能")));
+    element("btnDisable").addEventListener("click", () => runTask(() =>
+    {
+        if (window.audioStudio && window.audioStudio.isPlaying)
+        {
+            window.audioStudio.stopStreaming("电机已失能", true);
+        }
+        return sendControl(COMMAND.DISABLE, 0, "电机立即失能");
+    }));
 
     document.querySelectorAll("[data-motion]").forEach(button =>
     {
@@ -1385,6 +1427,10 @@ function initOtaUi()
     {
         btnOpen.addEventListener("click", () =>
         {
+            if (window.audioStudio && window.audioStudio.isPlaying)
+            {
+                window.audioStudio.stopStreaming("进入 OTA 面板", true);
+            }
             modal.style.display = "flex";
         });
     }
@@ -1589,6 +1635,11 @@ function initOtaUi()
             btnStart.disabled = true;
             btnAbort.disabled = false;
             addOtaLog("=== 开始执行 OTA 固件升级全流程 ===", "info");
+
+            if (window.audioStudio && window.audioStudio.isPlaying)
+            {
+                window.audioStudio.stopStreaming("OTA 升级已启动", true);
+            }
 
             try
             {

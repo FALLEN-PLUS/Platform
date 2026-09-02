@@ -16,12 +16,14 @@ class FocSerial
         this.resyncByteCount = 0;
         this.invalidFrameCount = 0;
         this.connectionGeneration = 0;
+        this.controlHeartbeatTimer = null;
 
         this.onFrame = () => {};
         this.onRawData = () => {};
         this.onTransmit = () => {};
         this.onConnectionChange = () => {};
         this.onError = () => {};
+        this.onAudioResponse = () => {};
     }
 
     async openPort()
@@ -153,10 +155,12 @@ class FocSerial
         this.isConnected = true;
         this.onConnectionChange(true);
         this.readLoopPromise = this.readLoop();
+        this.startControlHeartbeat();
     }
 
     async disconnect()
     {
+        this.stopControlHeartbeat();
         if (!this.port)
         {
             return;
@@ -185,6 +189,49 @@ class FocSerial
         this.rxBuffer = new Uint8Array(0);
         this.txChain = Promise.resolve();
         this.onConnectionChange(false);
+    }
+
+    startControlHeartbeat()
+    {
+        this.stopControlHeartbeat();
+        this.controlHeartbeatTimer = window.setInterval(() =>
+        {
+            this.sendControlHeartbeat().catch(() => {});
+        }, 200);
+    }
+
+    stopControlHeartbeat()
+    {
+        if (this.controlHeartbeatTimer !== null)
+        {
+            window.clearInterval(this.controlHeartbeatTimer);
+            this.controlHeartbeatTimer = null;
+        }
+    }
+
+    sendControlHeartbeat()
+    {
+        if (!this.isConnected || !this.writer || this.otaTransmissionActive)
+        {
+            return Promise.resolve();
+        }
+
+        const generation = this.connectionGeneration;
+        const frame = new Uint8Array([0xFF, 0x45, 0x00, 0x00, 0x00, 0xFE]);
+        const operation = async () =>
+        {
+            if (!this.isConnected || !this.writer || this.otaTransmissionActive ||
+                generation !== this.connectionGeneration)
+            {
+                return;
+            }
+            // Why: 心跳不写入操作日志，避免200ms周期消息淹没用户真正的控制记录。
+            await this.writer.write(frame);
+        };
+
+        const result = this.txChain.then(operation, operation);
+        this.txChain = result.catch(() => {});
+        return result;
     }
 
     async readLoop()
@@ -271,6 +318,7 @@ class FocSerial
                 this.formatSerialError(unexpectedError, startupRetryUsed ? "串口重试后读取中断" : "串口读取中断") :
                 this.formatSerialError(null, startupRetryUsed ? "串口重试后读取流提前结束" : "串口读取流提前结束");
             this.isConnected = false;
+            this.stopControlHeartbeat();
             this.connectionGeneration++;
             this.otaTransmissionActive = false;
             await this.settlePendingWrites();
@@ -313,49 +361,87 @@ class FocSerial
 
         while (this.rxBuffer.length >= 4)
         {
-            const tailIndex = this.findSequence(this.rxBuffer, tail);
-            if (tailIndex < 0)
+            // 1. 探测是否有完整合法的 0xFA 音频应答帧 (10 字节: 0xFA ... CRC8 0xFB)
+            let audioHeaderIdx = -1;
+            let audioCandidate = null;
+            for (let i = 0; i + 10 <= this.rxBuffer.length; i++)
             {
-                return;
-            }
-
-            if (tailIndex < 20)
-            {
-                this.resyncByteCount += tailIndex + 4;
-                this.rxBuffer = this.rxBuffer.slice(tailIndex + 4);
-                continue;
-            }
-
-            const frameStart = tailIndex - 20;
-            if (frameStart > 0)
-            {
-                this.resyncByteCount += frameStart;
-            }
-            const payload = this.rxBuffer.slice(frameStart, tailIndex);
-            this.rxBuffer = this.rxBuffer.slice(tailIndex + 4);
-
-            const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
-            const values = [];
-            let valid = true;
-            for (let i = 0; i < 5; i++)
-            {
-                const value = view.getFloat32(i * 4, true);
-                if (!Number.isFinite(value) || Math.abs(value) > 1e9)
+                if (this.rxBuffer[i] !== 0xFA || this.rxBuffer[i + 9] !== 0xFB)
                 {
-                    valid = false;
+                    continue;
+                }
+
+                const candidate = this.rxBuffer.slice(i, i + 10);
+                if (FocSerial.calcCrc8(candidate, 8) === candidate[8])
+                {
+                    // Why: 前面可能残留截断帧，必须继续扫描，不能让一个无效 0xFA 永久挡住后续 ACK。
+                    audioHeaderIdx = i;
+                    audioCandidate = candidate;
                     break;
                 }
-                values.push(value);
             }
+            const hasAudio = audioHeaderIdx >= 0;
 
-            if (valid)
+            // 2. 探测是否有完整的 JustFloat 遥测帧
+            const tailIndex = this.findSequence(this.rxBuffer, tail);
+            const hasTelemetry = (tailIndex >= 20);
+
+            // 3. 根据帧在接收流中的实际起始位置先后次序仲裁消费，避免先消费后帧导致前帧被丢弃
+            if (hasAudio && (!hasTelemetry || audioHeaderIdx < (tailIndex - 20)))
             {
-                this.frameCount++;
-                this.onFrame(values);
+                if (audioHeaderIdx > 0)
+                {
+                    this.resyncByteCount += audioHeaderIdx;
+                }
+                this.rxBuffer = this.rxBuffer.slice(audioHeaderIdx + 10);
+                this.onAudioResponse(audioCandidate);
+                continue;
+            }
+            else if (hasTelemetry)
+            {
+                let frameStart = tailIndex - 20;
+                if (frameStart > 0 && (!hasAudio || frameStart <= audioHeaderIdx))
+                {
+                    this.resyncByteCount += frameStart;
+                }
+                const payload = this.rxBuffer.slice(frameStart, tailIndex);
+                this.rxBuffer = this.rxBuffer.slice(tailIndex + 4);
+
+                const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+                const values = [];
+                let valid = true;
+                for (let i = 0; i < 5; i++)
+                {
+                    const value = view.getFloat32(i * 4, true);
+                    if (!Number.isFinite(value) || Math.abs(value) > 1e9)
+                    {
+                        valid = false;
+                        break;
+                    }
+                    values.push(value);
+                }
+
+                if (valid)
+                {
+                    this.frameCount++;
+                    this.onFrame(values);
+                }
+                else
+                {
+                    this.invalidFrameCount++;
+                }
+                continue;
             }
             else
             {
-                this.invalidFrameCount++;
+                // 只有残余杂波且不足一帧时
+                if (tailIndex >= 0 && tailIndex < 20)
+                {
+                    this.resyncByteCount += tailIndex + 4;
+                    this.rxBuffer = this.rxBuffer.slice(tailIndex + 4);
+                    continue;
+                }
+                break;
             }
         }
     }
@@ -424,6 +510,38 @@ class FocSerial
         return result;
     }
 
+    sendAudioFrame(frame10b)
+    {
+        if (!this.isConnected || !this.writer)
+        {
+            return Promise.reject(new Error("串口尚未连接"));
+        }
+        if (this.otaTransmissionActive)
+        {
+            return Promise.reject(new Error("OTA 升级期间不能发送音频控制命令"));
+        }
+
+        const generation = this.connectionGeneration;
+        const frame = new Uint8Array(frame10b);
+        const operation = async () =>
+        {
+            if (!this.isConnected || !this.writer || generation !== this.connectionGeneration)
+            {
+                throw new Error("串口连接已变更，旧音频命令已丢弃");
+            }
+            if (this.otaTransmissionActive)
+            {
+                throw new Error("OTA 升级期间不能发送音频控制命令");
+            }
+            await this.writer.write(frame);
+            this.onTransmit(frame);
+        };
+
+        const result = this.txChain.then(operation, operation);
+        this.txChain = result.catch(() => {});
+        return result;
+    }
+
     beginOtaTransmission()
     {
         if (!this.isConnected || !this.writer)
@@ -434,12 +552,17 @@ class FocSerial
         {
             throw new Error("OTA 串口发送通道已被占用");
         }
+        this.stopControlHeartbeat();
         this.otaTransmissionActive = true;
     }
 
     endOtaTransmission()
     {
         this.otaTransmissionActive = false;
+        if (this.isConnected)
+        {
+            this.startControlHeartbeat();
+        }
     }
 
     sendOtaBytes(bytes)
@@ -465,6 +588,27 @@ class FocSerial
         const result = this.txChain.then(operation, operation);
         this.txChain = result.catch(() => {});
         return result;
+    }
+
+    static calcCrc8(data, len)
+    {
+        let crc = 0x00;
+        for (let i = 0; i < len; i++)
+        {
+            crc ^= data[i];
+            for (let j = 0; j < 8; j++)
+            {
+                if ((crc & 0x80) !== 0)
+                {
+                    crc = ((crc << 1) ^ 0x07) & 0xFF;
+                }
+                else
+                {
+                    crc = (crc << 1) & 0xFF;
+                }
+            }
+        }
+        return crc;
     }
 
     static toHex(bytes)
